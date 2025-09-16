@@ -1,0 +1,5 @@
+{
+  "name": "AI Image Upscaler Pro",
+  "description": "An advanced web application that utilizes AI to upscale and enhance the quality of images, making them sharper and more detailed. Users can upload low-resolution images and receive a high-quality, upscaled version.",
+  "requestFramePermissions": []
+}
