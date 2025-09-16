@@ -36,6 +36,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onUpscale, onReset, 
                 <div className="flex items-center gap-2">
                     <FactorButton factor={2} currentFactor={upscaleFactor} setFactor={setUpscaleFactor} />
                     <FactorButton factor={4} currentFactor={upscaleFactor} setFactor={setUpscaleFactor} />
+                    <FactorButton factor={8} currentFactor={upscaleFactor} setFactor={setUpscaleFactor} />
                 </div>
             </div>
             <div className="flex items-center gap-4">

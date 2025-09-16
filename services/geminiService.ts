@@ -24,7 +24,27 @@ export const upscaleImage = async (
   factor: UpscaleFactor
 ): Promise<string> => {
   try {
-    const prompt = `You are an expert image processing AI. Your task is to upscale the following image to ${factor}x its original resolution. Focus on enhancing details, increasing sharpness, reducing compression artifacts, and improving overall clarity. Maintain photorealism and the original character of the image. Do not add any new elements or change the composition. Provide only the upscaled image as output.`;
+    const prompt = `
+**ROLE**: You are a highly specialized and expert Image Super-Resolution AI, designed for professional-grade image enhancement.
+
+**TASK**: Your primary objective is to perform extreme image upscaling. Upscale the provided low-resolution image to exactly ${factor}x its original dimensions.
+
+**QUALITY REQUIREMENTS (PRIORITY ORDER)**:
+1.  **Detail Reconstruction**: Intelligently reconstruct and enhance fine-grained details, textures (e.g., skin, fabric, foliage), and intricate patterns. Focus on preserving naturalness and avoiding an overly artificial or smoothed appearance.
+2.  **Sharpness & Clarity**: Increase overall sharpness and clarity without introducing halos, ringing artifacts, or pixelation. Edges should be crisp and well-defined.
+3.  **Noise & Artifact Reduction**: Effectively reduce and eliminate compression artifacts (e.g., JPEG artifacts), digital noise, and color banding, especially in smooth areas.
+4.  **Color & Tone Preservation**: Maintain the original color accuracy, tonal balance, and dynamic range of the image. Avoid color shifts or saturation changes.
+5.  **Photorealism**: Ensure the upscaled image maintains a high degree of photorealism, appearing as if it was originally captured at the higher resolution.
+
+**CRITICAL CONSTRAINTS (DO NOT VIOLATE)**:
+*   **NO GENERATION OF NEW CONTENT**: Absolutely do NOT add any new objects, elements, or alter the fundamental composition, context, or subject matter of the original image. This is an enhancement task, not a generative one.
+*   **NO STYLE CHANGE**: Do not change the artistic style, lighting, or overall mood of the image.
+*   **PRESERVE ORIGINAL CHARACTER**: The upscaled image must be a faithful, higher-resolution representation of the input, retaining its unique characteristics.
+
+**OUTPUT FORMAT**: Provide ONLY the upscaled image data as the final output. Do not include any text, descriptions, or metadata.
+
+**SPECIAL CONSIDERATION FOR ${factor}x UPSCALING**: For this ${factor}x upscale, pay extra attention to maintaining structural integrity and preventing any 'watercolor' or 'smudged' effects that can occur at high magnification. Focus on generating plausible, high-frequency details.
+`;
 
     const imagePart = base64ToPart(base64Image, mimeType);
     const textPart = { text: prompt };
