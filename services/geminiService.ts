@@ -1,13 +1,9 @@
-
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import type { UpscaleFactor } from '../types';
 
-const API_KEY = process.env.API_KEY;
-if (!API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// FIX: Per coding guidelines, the API key must be obtained from process.env.API_KEY and used directly.
+// The execution environment is assumed to have this variable pre-configured.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const base64ToPart = (base64: string, mimeType: string): Part => {
   return {

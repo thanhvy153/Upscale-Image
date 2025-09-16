@@ -8,6 +8,9 @@ import { upscaleImage } from './services/geminiService';
 import type { UpscaleFactor } from './types';
 import { ControlPanel } from './components/ControlPanel';
 
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<File | null>(null);
   const [originalImagePreview, setOriginalImagePreview] = useState<string | null>(null);
@@ -17,6 +20,10 @@ const App: React.FC = () => {
   const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(2);
 
   const handleImageUpload = (file: File) => {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+        setError(`File is too large. Please upload an image under ${MAX_FILE_SIZE_MB}MB.`);
+        return;
+    }
     setOriginalImage(file);
     setUpscaledImage(null);
     setError(null);
