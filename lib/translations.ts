@@ -23,6 +23,8 @@ export const translations = {
     preprocessing: 'Preprocessing:',
     noiseReduction: 'Noise Reduction',
     autoContrast: 'Auto Contrast',
+    proMode: 'Pro Mode:',
+    proModeTooltip: 'Uses advanced, multi-pass instructions for the AI to achieve superior detail and clarity. Recommended for best results.',
 
     // Image Result Viewer
     originalImageTitle: 'Original',
@@ -70,6 +72,8 @@ export const translations = {
     preprocessing: 'Tiền Xử Lý:',
     noiseReduction: 'Khử Nhiễu',
     autoContrast: 'Tự Động Tương Phản',
+    proMode: 'Chế Độ Pro:',
+    proModeTooltip: 'Sử dụng các chỉ dẫn nâng cao, đa bước cho AI để đạt được độ chi tiết và rõ nét vượt trội. Khuyến nghị để có kết quả tốt nhất.',
 
     // Image Result Viewer
     originalImageTitle: 'Ảnh Gốc',

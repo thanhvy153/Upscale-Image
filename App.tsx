@@ -5,7 +5,7 @@ import { ImageUploader } from './components/ImageUploader';
 import { ImageResultViewer } from './components/ImageResultViewer';
 import { LoadingState } from './components/LoadingState';
 import { upscaleImage } from './services/geminiService';
-import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions } from './types';
+import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode } from './types';
 import { ControlPanel } from './components/ControlPanel';
 import { useI18n } from './contexts/I18nContext';
 
@@ -19,8 +19,9 @@ const App: React.FC = () => {
   const [upscaledImage, setUpscaledImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(2);
+  const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(4);
   const [upscalingGoal, setUpscalingGoal] = useState<UpscalingGoal>('balanced');
+  const [upscaleMode, setUpscaleMode] = useState<UpscaleMode>('standard');
   const [preprocessingOptions, setPreprocessingOptions] = useState<PreprocessingOptions>({
     noiseReduction: false,
     autoContrast: false,
@@ -117,7 +118,7 @@ const App: React.FC = () => {
           return;
       }
       
-      const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal);
+      const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal, upscaleMode);
       setUpscaledImage(`data:image/png;base64,${enhancedImageBase64}`);
     } catch (err) {
       console.error(err);
@@ -125,7 +126,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [originalImage, upscaleFactor, upscalingGoal, preprocessingOptions, t]);
+  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, t]);
 
 
   return (
@@ -145,6 +146,8 @@ const App: React.FC = () => {
               setUpscalingGoal={setUpscalingGoal}
               preprocessingOptions={preprocessingOptions}
               setPreprocessingOptions={setPreprocessingOptions}
+              upscaleMode={upscaleMode}
+              setUpscaleMode={setUpscaleMode}
               isLoading={isLoading}
             />
             

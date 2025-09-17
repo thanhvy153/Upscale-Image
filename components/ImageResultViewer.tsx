@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -90,6 +89,14 @@ export const ImageResultViewer: React.FC<ImageResultViewerProps> = ({ originalIm
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                 </svg>
               </div>
+            </div>
+
+            {/* Labels to identify original and upscaled images */}
+            <div className="absolute top-3 left-3 px-3 py-1 bg-black/60 text-white text-sm font-bold rounded-md pointer-events-none animate-fade-in">
+              {t('upscaledImageTitle')}
+            </div>
+            <div className="absolute top-3 right-3 px-3 py-1 bg-black/60 text-white text-sm font-bold rounded-md pointer-events-none animate-fade-in">
+              {t('originalImageTitle')}
             </div>
           </>
         ) : (
