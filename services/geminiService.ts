@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Modality, Part } from "@google/genai";
-import type { UpscaleFactor } from '../types';
+import type { UpscaleFactor, UpscalingGoal } from '../types';
 
 // FIX: Per coding guidelines, the API key must be obtained from process.env.API_KEY and used directly.
 // The execution environment is assumed to have this variable pre-configured.
@@ -14,13 +15,26 @@ const base64ToPart = (base64: string, mimeType: string): Part => {
   };
 };
 
+const getGoalSpecificInstructions = (goal: UpscalingGoal): string => {
+  switch (goal) {
+    case 'details':
+      return `\n**SPECIALIZATION**: Focus intensely on reconstructing high-frequency details. Prioritize texture, fine lines, and micro-details above all else. The goal is maximum clarity and definition.`;
+    case 'smoothness':
+      return `\n**SPECIALIZATION**: Prioritize noise reduction and creating smooth, clean gradients. Aggressively remove compression artifacts and digital noise, even at the slight risk of losing some imperceptible micro-texture. The goal is a pristine, artifact-free image.`;
+    case 'balanced':
+    default:
+      return ''; // No special instructions for balanced
+  }
+}
+
 export const upscaleImage = async (
   base64Image: string,
   mimeType: string,
-  factor: UpscaleFactor
+  factor: UpscaleFactor,
+  goal: UpscalingGoal
 ): Promise<string> => {
   try {
-    const prompt = `
+    const basePrompt = `
 **ROLE**: You are a highly specialized and expert Image Super-Resolution AI, designed for professional-grade image enhancement.
 
 **TASK**: Your primary objective is to perform extreme image upscaling. Upscale the provided low-resolution image to exactly ${factor}x its original dimensions.
@@ -41,6 +55,8 @@ export const upscaleImage = async (
 
 **SPECIAL CONSIDERATION FOR ${factor}x UPSCALING**: For this ${factor}x upscale, pay extra attention to maintaining structural integrity and preventing any 'watercolor' or 'smudged' effects that can occur at high magnification. Focus on generating plausible, high-frequency details.
 `;
+    
+    const prompt = basePrompt + getGoalSpecificInstructions(goal);
 
     const imagePart = base64ToPart(base64Image, mimeType);
     const textPart = { text: prompt };
