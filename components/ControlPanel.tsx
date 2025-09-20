@@ -20,7 +20,7 @@ interface ControlPanelProps {
 }
 
 const LabeledComponent: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div className="flex flex-col sm:flex-row items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <span className="font-semibold text-slate-300 shrink-0">{label}</span>
         {children}
     </div>
@@ -52,7 +52,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
     return (
         <div className="w-full max-w-5xl p-4 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
                 <LabeledComponent label={t('upscaleFactor')}>
                     <div className="flex items-center gap-1 p-1 bg-slate-900/50 rounded-lg w-full">
                         {factors.map((factor) => (
@@ -80,7 +80,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                 </LabeledComponent>
 
                 <LabeledComponent label={t('preprocessing')}>
-                     <div className="flex items-center gap-4">
+                     <div className="flex items-center gap-4 flex-wrap">
                         <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
                             <input type="checkbox" checked={preprocessingOptions.noiseReduction} onChange={() => handlePreprocessingChange('noiseReduction')}
                                 className="w-4 h-4 text-cyan-600 bg-slate-700 border-slate-500 rounded focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-2" />
@@ -94,7 +94,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                     </div>
                 </LabeledComponent>
 
-                <div className="flex flex-col gap-4 justify-center">
+                <div className="flex flex-col gap-4 justify-start">
                     <LabeledComponent label={t('proMode')}>
                         <div className="flex items-center w-full" title={t('proModeTooltip')}>
                             <label htmlFor="pro-mode-toggle" className="flex items-center cursor-pointer">
@@ -144,7 +144,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                 >
                     {isLoading ? (
                         <>
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="http://www.w3.org/2000/svg">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 2000/svg">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
