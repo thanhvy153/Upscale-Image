@@ -14,6 +14,8 @@ interface ControlPanelProps {
     setPreprocessingOptions: (options: PreprocessingOptions) => void;
     upscaleMode: UpscaleMode;
     setUpscaleMode: (mode: UpscaleMode) => void;
+    colorEnhancement: boolean;
+    setColorEnhancement: (value: boolean) => void;
     isLoading: boolean;
 }
 
@@ -28,7 +30,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     const { 
         onUpscale, onReset, upscaleFactor, setUpscaleFactor,
         upscalingGoal, setUpscalingGoal, preprocessingOptions, 
-        setPreprocessingOptions, upscaleMode, setUpscaleMode, isLoading 
+        setPreprocessingOptions, upscaleMode, setUpscaleMode, 
+        colorEnhancement, setColorEnhancement, isLoading 
     } = props;
     const { t } = useI18n();
     
@@ -91,20 +94,37 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                     </div>
                 </LabeledComponent>
 
-                 <LabeledComponent label={t('proMode')}>
-                    <div className="flex items-center" title={t('proModeTooltip')}>
-                        <label htmlFor="pro-mode-toggle" className="flex items-center cursor-pointer">
-                            <div className="relative">
-                                <input type="checkbox" id="pro-mode-toggle" className="sr-only" 
-                                    checked={upscaleMode === 'pro'}
-                                    onChange={() => setUpscaleMode(upscaleMode === 'standard' ? 'pro' : 'standard')}
-                                />
-                                <div className="block bg-slate-700 w-14 h-8 rounded-full"></div>
-                                <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${upscaleMode === 'pro' ? 'translate-x-6 bg-gradient-to-r from-cyan-400 to-blue-500' : ''}`}></div>
-                            </div>
-                        </label>
-                    </div>
-                </LabeledComponent>
+                <div className="flex flex-col gap-4 justify-center">
+                    <LabeledComponent label={t('proMode')}>
+                        <div className="flex items-center w-full" title={t('proModeTooltip')}>
+                            <label htmlFor="pro-mode-toggle" className="flex items-center cursor-pointer">
+                                <div className="relative">
+                                    <input type="checkbox" id="pro-mode-toggle" className="sr-only" 
+                                        checked={upscaleMode === 'pro'}
+                                        onChange={() => setUpscaleMode(upscaleMode === 'standard' ? 'pro' : 'standard')}
+                                    />
+                                    <div className="block bg-slate-700 w-14 h-8 rounded-full"></div>
+                                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${upscaleMode === 'pro' ? 'translate-x-6 bg-gradient-to-r from-cyan-400 to-blue-500' : ''}`}></div>
+                                </div>
+                            </label>
+                        </div>
+                    </LabeledComponent>
+
+                    <LabeledComponent label={t('colorEnhancement')}>
+                        <div className="flex items-center w-full" title={t('colorEnhancementTooltip')}>
+                            <label htmlFor="color-enhance-toggle" className="flex items-center cursor-pointer">
+                                <div className="relative">
+                                    <input type="checkbox" id="color-enhance-toggle" className="sr-only" 
+                                        checked={colorEnhancement}
+                                        onChange={() => setColorEnhancement(!colorEnhancement)}
+                                    />
+                                    <div className="block bg-slate-700 w-14 h-8 rounded-full"></div>
+                                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${colorEnhancement ? 'translate-x-6 bg-gradient-to-r from-cyan-400 to-blue-500' : ''}`}></div>
+                                </div>
+                            </label>
+                        </div>
+                    </LabeledComponent>
+                </div>
             </div>
             
             <div className="border-t border-slate-700 my-2"></div>

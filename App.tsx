@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(4);
   const [upscalingGoal, setUpscalingGoal] = useState<UpscalingGoal>('balanced');
   const [upscaleMode, setUpscaleMode] = useState<UpscaleMode>('standard');
+  const [colorEnhancement, setColorEnhancement] = useState<boolean>(true);
   const [preprocessingOptions, setPreprocessingOptions] = useState<PreprocessingOptions>({
     noiseReduction: false,
     autoContrast: false,
@@ -98,6 +99,29 @@ const App: React.FC = () => {
     });
   };
 
+  const applyColorEnhancement = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject(new Error('Could not get canvas context'));
+            }
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            // Filters to create a more vibrant, sharp, and high-contrast "8K Feel"
+            ctx.filter = 'saturate(1.2) contrast(1.1) brightness(1.05)';
+            
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = (err) => reject(new Error('Failed to load image for enhancement.'));
+        img.src = dataUrl;
+    });
+  };
+
   const handleUpscale = useCallback(async () => {
     if (!originalImage) return;
 
@@ -119,14 +143,20 @@ const App: React.FC = () => {
       }
       
       const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal, upscaleMode);
-      setUpscaledImage(`data:image/png;base64,${enhancedImageBase64}`);
+      let finalImageSrc = `data:image/png;base64,${enhancedImageBase64}`;
+
+      if (colorEnhancement) {
+        finalImageSrc = await applyColorEnhancement(finalImageSrc);
+      }
+
+      setUpscaledImage(finalImageSrc);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t('errorUnknown'));
     } finally {
       setIsLoading(false);
     }
-  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, t]);
+  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, colorEnhancement, t]);
 
 
   return (
@@ -148,6 +178,8 @@ const App: React.FC = () => {
               setPreprocessingOptions={setPreprocessingOptions}
               upscaleMode={upscaleMode}
               setUpscaleMode={setUpscaleMode}
+              colorEnhancement={colorEnhancement}
+              setColorEnhancement={setColorEnhancement}
               isLoading={isLoading}
             />
             

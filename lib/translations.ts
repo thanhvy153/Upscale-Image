@@ -25,6 +25,8 @@ export const translations = {
     autoContrast: 'Auto Contrast',
     proMode: 'Pro Mode:',
     proModeTooltip: 'Uses advanced, multi-pass instructions for the AI to achieve superior detail and clarity. Recommended for best results.',
+    colorEnhancement: 'Vibrance & Sharpen:',
+    colorEnhancementTooltip: 'Applies post-processing filters to boost color vibrancy, contrast, and sharpness for an "8K Feel".',
 
     // Image Result Viewer
     originalImageTitle: 'Original',
@@ -74,6 +76,8 @@ export const translations = {
     autoContrast: 'Tự Động Tương Phản',
     proMode: 'Chế Độ Pro:',
     proModeTooltip: 'Sử dụng các chỉ dẫn nâng cao, đa bước cho AI để đạt được độ chi tiết và rõ nét vượt trội. Khuyến nghị để có kết quả tốt nhất.',
+    colorEnhancement: 'Độ Rực Rỡ & Sắc Nét:',
+    colorEnhancementTooltip: 'Áp dụng các bộ lọc hậu kỳ để tăng cường độ rực rỡ, độ tương phản và độ sắc nét của màu sắc để tạo "Cảm giác 8K".',
 
     // Image Result Viewer
     originalImageTitle: 'Ảnh Gốc',
