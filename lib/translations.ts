@@ -1,4 +1,3 @@
-
 export type Locale = 'en' | 'vi';
 
 export const translations = {
@@ -8,8 +7,8 @@ export const translations = {
     headerSubtitle: 'Transform your low-resolution images into high-quality masterpieces with a single click.',
     
     // Image Uploader
-    uploaderPrompt: 'Click to upload or drag & drop',
-    uploaderFormats: 'PNG, JPG, or WEBP (Max 5MB)',
+    uploaderPrompt: 'Click to upload or drag & drop images',
+    uploaderFormats: 'PNG, JPG, or WEBP (Max 5MB per image)',
 
     // Control Panel
     upscaleEngine: 'Upscale Engine:',
@@ -18,8 +17,8 @@ export const translations = {
     engineFidelity: 'Fidelity',
     engineFidelityTooltip: 'Uses a fast, in-browser algorithm for a technical upscale. Best for preserving original details and photorealism.',
     upscaleFactor: 'Upscale Factor:',
-    uploadNewImage: 'Upload New Image',
-    enhanceImage: 'Enhance Image',
+    clearQueue: 'Clear Queue',
+    startBatch: 'Start Batch Processing',
     processing: 'Processing...',
     upscalingGoal: 'Upscaling Goal:',
     goalBalanced: 'Balanced',
@@ -33,11 +32,19 @@ export const translations = {
     colorEnhancement: 'Vibrance & Sharpen:',
     colorEnhancementTooltip: 'Applies post-processing filters to boost color vibrancy, contrast, and sharpness for an "8K Feel".',
 
-    // Image Result Viewer
+    // Image Result Viewer & Job Card
     originalImageTitle: 'Original',
     upscaledImageTitle: 'Upscaled',
-    upscaledPlaceholder: 'Your enhanced image will appear here.',
-    previewNotAvailable: 'Image preview not available.',
+    downloadUpscaledPNG: 'Download Upscaled (PNG)',
+    downloadCompressedJPG: 'Download Compressed (JPG)',
+    batchQueueTitle: 'Processing Queue',
+    jobStatusQueued: 'Queued',
+    jobStatusProcessing: 'Processing...',
+    jobStatusCompleted: 'Completed',
+    jobStatusError: 'Error',
+    // FIX: Add missing translation key for upscaled image placeholder text.
+    upscaledPlaceholder: 'The upscaled image will appear here once processing is complete.',
+    // FIX: Add missing translation key for the download button in the result viewer.
     downloadButton: 'Download Upscaled Image',
 
     // Loading State
@@ -50,7 +57,7 @@ export const translations = {
 
     // App/Error
     errorPrefix: 'Error: ',
-    errorFileSize: (size: number) => `File is too large. Please upload an image under ${size}MB.`,
+    errorFileSize: (size: number) => `A file is too large. Please ensure all images are under ${size}MB.`,
     errorProcessImage: 'Could not process image. Please try another file.',
     errorReadFile: 'Failed to read the image file.',
     errorUnknown: 'An unknown error occurred during upscaling.',
@@ -64,8 +71,8 @@ export const translations = {
     headerSubtitle: 'Biến đổi hình ảnh độ phân giải thấp của bạn thành kiệt tác chất lượng cao chỉ với một cú nhấp chuột.',
 
     // Image Uploader
-    uploaderPrompt: 'Nhấp để tải lên hoặc kéo và thả',
-    uploaderFormats: 'PNG, JPG, hoặc WEBP (Tối đa 5MB)',
+    uploaderPrompt: 'Nhấp để tải lên hoặc kéo và thả nhiều ảnh',
+    uploaderFormats: 'PNG, JPG, hoặc WEBP (Tối đa 5MB mỗi ảnh)',
 
     // Control Panel
     upscaleEngine: 'Cơ Chế Nâng Cấp:',
@@ -74,8 +81,8 @@ export const translations = {
     engineFidelity: 'Độ Trung Thực',
     engineFidelityTooltip: 'Sử dụng thuật toán kỹ thuật, tốc độ cao ngay trên trình duyệt. Tốt nhất để bảo toàn chi tiết gốc và tính chân thực của ảnh.',
     upscaleFactor: 'Hệ Số Nâng Cấp:',
-    uploadNewImage: 'Tải Ảnh Mới',
-    enhanceImage: 'Nâng Cấp Ảnh',
+    clearQueue: 'Xóa Hàng Đợi',
+    startBatch: 'Bắt Đầu Xử Lý Hàng Loạt',
     processing: 'Đang xử lý...',
     upscalingGoal: 'Mục Tiêu:',
     goalBalanced: 'Cân Bằng',
@@ -89,11 +96,19 @@ export const translations = {
     colorEnhancement: 'Độ Rực Rỡ & Sắc Nét:',
     colorEnhancementTooltip: 'Áp dụng các bộ lọc hậu kỳ để tăng cường độ rực rỡ, độ tương phản và độ sắc nét của màu sắc để tạo "Cảm giác 8K".',
 
-    // Image Result Viewer
+    // Image Result Viewer & Job Card
     originalImageTitle: 'Ảnh Gốc',
     upscaledImageTitle: 'Đã Nâng Cấp',
-    upscaledPlaceholder: 'Ảnh đã nâng cấp của bạn sẽ xuất hiện ở đây.',
-    previewNotAvailable: 'Không có bản xem trước hình ảnh.',
+    downloadUpscaledPNG: 'Tải Ảnh Nâng Cấp (PNG)',
+    downloadCompressedJPG: 'Tải Ảnh Nén (JPG)',
+    batchQueueTitle: 'Hàng Đợi Xử Lý',
+    jobStatusQueued: 'Đang chờ',
+    jobStatusProcessing: 'Đang xử lý...',
+    jobStatusCompleted: 'Hoàn thành',
+    jobStatusError: 'Lỗi',
+    // FIX: Add missing translation key for upscaled image placeholder text.
+    upscaledPlaceholder: 'Ảnh đã nâng cấp sẽ xuất hiện ở đây sau khi xử lý xong.',
+    // FIX: Add missing translation key for the download button in the result viewer.
     downloadButton: 'Tải Xuống Ảnh Đã Nâng Cấp',
 
     // Loading State
@@ -106,7 +121,7 @@ export const translations = {
 
     // App/Error
     errorPrefix: 'Lỗi: ',
-    errorFileSize: (size: number) => `Tệp quá lớn. Vui lòng tải lên hình ảnh dưới ${size}MB.`,
+    errorFileSize: (size: number) => `Có tệp quá lớn. Vui lòng đảm bảo tất cả ảnh đều dưới ${size}MB.`,
     errorProcessImage: 'Không thể xử lý hình ảnh. Vui lòng thử một tệp khác.',
     errorReadFile: 'Không thể đọc tệp hình ảnh.',
     errorUnknown: 'Đã xảy ra lỗi không xác định trong quá trình nâng cấp.',

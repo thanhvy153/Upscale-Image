@@ -11,3 +11,14 @@ export interface PreprocessingOptions {
 }
 
 export type UpscaleEngine = 'generative' | 'fidelity';
+
+export type JobStatus = 'queued' | 'processing' | 'completed' | 'error';
+
+export interface Job {
+  id: string;
+  file: File;
+  originalPreview: string;
+  upscaledImage: string | null;
+  status: JobStatus;
+  error: string | null;
+}

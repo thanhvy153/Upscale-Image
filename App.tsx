@@ -1,24 +1,128 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ImageUploader } from './components/ImageUploader';
-import { ImageResultViewer } from './components/ImageResultViewer';
-import { LoadingState } from './components/LoadingState';
 import { upscaleImage } from './services/geminiService';
-import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode, UpscaleEngine } from './types';
+import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode, UpscaleEngine, Job, JobStatus } from './types';
 import { ControlPanel } from './components/ControlPanel';
 import { useI18n } from './contexts/I18nContext';
 
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
+const JobCard: React.FC<{ job: Job }> = ({ job }) => {
+  const { t } = useI18n();
+
+  const getStatusChipColor = (status: JobStatus) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'processing': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+      case 'error': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case 'queued':
+      default: return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
+    }
+  };
+
+  const handleDownload = (format: 'png' | 'jpeg') => {
+    if (!job.upscaledImage) return;
+
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const quality = format === 'jpeg' ? 0.85 : undefined;
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+        
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        const baseName = job.file.name.split('.').slice(0, -1).join('.');
+        a.download = `upscaled-${baseName}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+    img.src = job.upscaledImage;
+  };
+
+  return (
+    <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 flex flex-col gap-4">
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex items-start gap-3">
+          <img src={job.originalPreview} alt={job.file.name} className="w-16 h-16 rounded-md object-cover bg-slate-900" />
+          <div>
+            <p className="text-sm font-semibold text-slate-200 break-all">{job.file.name}</p>
+            <p className="text-xs text-slate-400">{Math.round(job.file.size / 1024)} KB</p>
+          </div>
+        </div>
+        <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${getStatusChipColor(job.status)}`}>
+          {t(`jobStatus${job.status.charAt(0).toUpperCase() + job.status.slice(1)}` as any)}
+        </div>
+      </div>
+
+      {job.status === 'processing' && (
+        <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+          <div className="bg-cyan-500 h-2.5 rounded-full animate-pulse" style={{width: '100%'}}></div>
+        </div>
+      )}
+
+      {job.status === 'completed' && job.upscaledImage && (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex flex-col items-center">
+              <img src={job.originalPreview} alt={t('originalImageTitle')} className="w-full h-auto rounded-lg object-contain" />
+              <p className="text-xs mt-1 text-slate-400 font-semibold">{t('originalImageTitle')}</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <img src={job.upscaledImage} alt={t('upscaledImageTitle')} className="w-full h-auto rounded-lg object-contain" />
+              <p className="text-xs mt-1 text-slate-400 font-semibold">{t('upscaledImageTitle')}</p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button onClick={() => handleDownload('jpeg')} className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 transition-colors">
+              {t('downloadCompressedJPG')}
+            </button>
+            <button onClick={() => handleDownload('png')} className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-slate-600 font-medium rounded-md text-slate-300 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900 transition-colors">
+              {t('downloadUpscaledPNG')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {job.status === 'error' && job.error && (
+        <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-3 py-2 rounded-lg text-sm" role="alert">
+          <strong className="font-bold">{t('errorPrefix')}</strong>
+          <span>{job.error}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BatchProcessor: React.FC<{ jobs: Job[] }> = ({ jobs }) => {
+  const { t } = useI18n();
+  return (
+    <div className="w-full max-w-5xl flex flex-col gap-6 animate-fade-in">
+      <h2 className="text-2xl font-bold text-slate-200">{t('batchQueueTitle')}</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {jobs.map(job => <JobCard key={job.id} job={job} />)}
+      </div>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const { t } = useI18n();
-  const [originalImage, setOriginalImage] = useState<File | null>(null);
-  const [originalImagePreview, setOriginalImagePreview] = useState<string | null>(null);
-  const [upscaledImage, setUpscaledImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Settings state
   const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(4);
   const [upscalingGoal, setUpscalingGoal] = useState<UpscalingGoal>('balanced');
   const [upscaleMode, setUpscaleMode] = useState<UpscaleMode>('standard');
@@ -29,66 +133,53 @@ const App: React.FC = () => {
     autoContrast: false,
   });
 
-  const handleImageUpload = (file: File) => {
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-        setError(t('errorFileSize', MAX_FILE_SIZE_MB));
-        return;
-    }
-    setOriginalImage(file);
-    setUpscaledImage(null);
+  const handleImageUpload = (files: FileList) => {
     setError(null);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setOriginalImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const newJobs: Job[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setError(t('errorFileSize', MAX_FILE_SIZE_MB));
+        continue;
+      }
+      newJobs.push({
+        id: crypto.randomUUID(),
+        file,
+        originalPreview: URL.createObjectURL(file),
+        upscaledImage: null,
+        status: 'queued',
+        error: null,
+      });
+    }
+    setJobs(prevJobs => [...prevJobs, ...newJobs]);
   };
   
-  const handleReset = () => {
-    setOriginalImage(null);
-    setOriginalImagePreview(null);
-    setUpscaledImage(null);
+  const handleClearQueue = () => {
+    jobs.forEach(job => URL.revokeObjectURL(job.originalPreview));
+    setJobs([]);
     setError(null);
-    setIsLoading(false);
+    setIsBatchProcessing(false);
   };
 
   const preprocessImage = (file: File, options: PreprocessingOptions): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    return reject(new Error('Could not get canvas context'));
-                }
+      return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return reject(new Error('Could not get canvas context'));
 
-                canvas.width = img.width;
-                canvas.height = img.height;
-                
-                let filterString = '';
-                if (options.noiseReduction) {
-                    // A very slight blur can act as a simple denoise filter
-                    filterString += 'blur(0.4px) ';
-                }
-                if (options.autoContrast) {
-                    // A simple contrast boost
-                    filterString += 'contrast(1.15) ';
-                }
-                
-                ctx.filter = filterString.trim();
-                ctx.drawImage(img, 0, 0);
-                
-                // Resolve with the new data URL
-                resolve(canvas.toDataURL(file.type));
-            };
-            img.onerror = reject;
-            img.src = event.target?.result as string;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+              canvas.width = img.width;
+              canvas.height = img.height;
+              let filterString = '';
+              if (options.noiseReduction) filterString += 'blur(0.4px) ';
+              if (options.autoContrast) filterString += 'contrast(1.15) ';
+              ctx.filter = filterString.trim();
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL(file.type));
+          };
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+      });
   };
 
   const fileToDataURL = (file: File): Promise<string> => {
@@ -101,130 +192,106 @@ const App: React.FC = () => {
   };
 
   const applyColorEnhancement = (dataUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return reject(new Error('Could not get canvas context'));
-            }
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            // Filters to create a more vibrant, sharp, and high-contrast "8K Feel"
-            ctx.filter = 'saturate(1.2) contrast(1.1) brightness(1.05)';
-            
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = (err) => reject(new Error('Failed to load image for enhancement.'));
-        img.src = dataUrl;
-    });
+      return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return reject(new Error('Could not get canvas context'));
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.filter = 'saturate(1.2) contrast(1.1) brightness(1.05)';
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = (err) => reject(new Error('Failed to load image for enhancement.'));
+          img.src = dataUrl;
+      });
   };
 
   const clientSideUpscale = (file: File, factor: UpscaleFactor): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-            if (!e.target?.result) {
-                return reject(new Error('Could not read file.'));
-            }
-            img.onload = () => {
-                const newWidth = img.width * factor;
-                const newHeight = img.height * factor;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                const ctx = canvas.getContext('2d');
-
-                if (!ctx) {
-                    return reject(new Error('Could not get canvas context'));
-                }
-
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                
-                ctx.drawImage(img, 0, 0, newWidth, newHeight);
-
-                // A simple contrast boost can improve perceived sharpness after upscaling
-                const finalCanvas = document.createElement('canvas');
-                finalCanvas.width = newWidth;
-                finalCanvas.height = newHeight;
-                const finalCtx = finalCanvas.getContext('2d');
-                if (!finalCtx) {
-                    return reject(new Error('Could not get canvas context for filtering'));
-                }
-                finalCtx.filter = 'contrast(1.05)';
-                finalCtx.drawImage(canvas, 0, 0);
-
-                resolve(finalCanvas.toDataURL(file.type));
-            };
-            img.onerror = () => reject(new Error('Image could not be loaded for client-side upscaling.'));
-            img.src = e.target.result as string;
-        };
-        reader.onerror = () => reject(new Error('Failed to read file for client-side upscaling.'));
-        reader.readAsDataURL(file);
-    });
+      return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+              const newWidth = img.width * factor;
+              const newHeight = img.height * factor;
+              const canvas = document.createElement('canvas');
+              canvas.width = newWidth;
+              canvas.height = newHeight;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return reject(new Error('Could not get canvas context'));
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, newWidth, newHeight);
+              const finalCanvas = document.createElement('canvas');
+              finalCanvas.width = newWidth;
+              finalCanvas.height = newHeight;
+              const finalCtx = finalCanvas.getContext('2d');
+              if (!finalCtx) return reject(new Error('Could not get canvas context for filtering'));
+              finalCtx.filter = 'contrast(1.05)';
+              finalCtx.drawImage(canvas, 0, 0);
+              resolve(finalCanvas.toDataURL(file.type));
+          };
+          img.onerror = () => reject(new Error('Image could not be loaded for client-side upscaling.'));
+          img.src = URL.createObjectURL(file);
+      });
   };
 
-
-  const handleUpscale = useCallback(async () => {
-    if (!originalImage) return;
-
-    setIsLoading(true);
+  const handleStartBatch = useCallback(async () => {
+    setIsBatchProcessing(true);
     setError(null);
-    setUpscaledImage(null);
 
-    try {
-      if (upscaleEngine === 'fidelity') {
-          const upscaledDataUrl = await clientSideUpscale(originalImage, upscaleFactor);
-          setUpscaledImage(upscaledDataUrl);
-      } else { // 'generative' engine
-          const needsPreprocessing = preprocessingOptions.noiseReduction || preprocessingOptions.autoContrast;
-          const imageDataUrl = needsPreprocessing
-            ? await preprocessImage(originalImage, preprocessingOptions)
-            : await fileToDataURL(originalImage);
+    const jobsToProcess = jobs.filter(j => j.status === 'queued' || j.status === 'error');
 
-          const base64Image = imageDataUrl.split(',')[1];
-          if (!base64Image) {
-              setError(t('errorProcessImage'));
-              setIsLoading(false);
-              return;
-          }
-          
-          const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal, upscaleMode);
-          let finalImageSrc = `data:image/png;base64,${enhancedImageBase64}`;
+    for (const job of jobsToProcess) {
+      try {
+        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'processing', error: null } : j));
+        
+        let finalImageSrc: string;
 
-          if (colorEnhancement) {
-            finalImageSrc = await applyColorEnhancement(finalImageSrc);
-          }
+        if (upscaleEngine === 'fidelity') {
+            finalImageSrc = await clientSideUpscale(job.file, upscaleFactor);
+        } else {
+            const needsPreprocessing = preprocessingOptions.noiseReduction || preprocessingOptions.autoContrast;
+            const imageDataUrl = needsPreprocessing
+              ? await preprocessImage(job.file, preprocessingOptions)
+              : await fileToDataURL(job.file);
 
-          setUpscaledImage(finalImageSrc);
+            const base64Image = imageDataUrl.split(',')[1];
+            if (!base64Image) throw new Error(t('errorProcessImage'));
+            
+            const enhancedImageBase64 = await upscaleImage(base64Image, job.file.type, upscaleFactor, upscalingGoal, upscaleMode);
+            let upscaledSrc = `data:image/png;base64,${enhancedImageBase64}`;
+
+            if (colorEnhancement) {
+              upscaledSrc = await applyColorEnhancement(upscaledSrc);
+            }
+            finalImageSrc = upscaledSrc;
+        }
+
+        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'completed', upscaledImage: finalImageSrc } : j));
+
+      } catch (err) {
+        console.error(err);
+        const message = err instanceof Error ? err.message : t('errorUnknown');
+        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'error', error: message } : j));
       }
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : t('errorUnknown'));
-    } finally {
-      setIsLoading(false);
     }
-  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, colorEnhancement, t, upscaleEngine]);
 
+    setIsBatchProcessing(false);
+  }, [jobs, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, colorEnhancement, t, upscaleEngine]);
 
   return (
     <div className="min-h-screen bg-slate-900 font-sans text-slate-200 flex flex-col items-center p-4 sm:p-6 lg:p-8">
       <Header />
-      <main className="w-full max-w-7xl mx-auto flex-grow flex flex-col items-center">
-        {!originalImagePreview ? (
+      <main className="w-full max-w-7xl mx-auto flex-grow flex flex-col items-center gap-8">
+        {jobs.length === 0 ? (
           <ImageUploader onImageUpload={handleImageUpload} />
         ) : (
-          <div className="w-full flex flex-col items-center gap-8">
+          <>
             <ControlPanel
-              onUpscale={handleUpscale}
-              onReset={handleReset}
+              onStartBatch={handleStartBatch}
+              onClearQueue={handleClearQueue}
               upscaleFactor={upscaleFactor}
               setUpscaleFactor={setUpscaleFactor}
               upscalingGoal={upscalingGoal}
@@ -235,27 +302,19 @@ const App: React.FC = () => {
               setUpscaleMode={setUpscaleMode}
               colorEnhancement={colorEnhancement}
               setColorEnhancement={setColorEnhancement}
-              isLoading={isLoading}
+              isLoading={isBatchProcessing}
               upscaleEngine={upscaleEngine}
               setUpscaleEngine={setUpscaleEngine}
             />
-            
-            {error && (
-              <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative w-full max-w-4xl text-center" role="alert">
-                <strong className="font-bold">{t('errorPrefix')}</strong>
-                <span className="block sm:inline">{error}</span>
-              </div>
-            )}
-            
-            {isLoading ? (
-              <LoadingState />
-            ) : (
-              <ImageResultViewer 
-                originalImage={originalImagePreview} 
-                upscaledImage={upscaledImage} 
-              />
-            )}
-          </div>
+            <BatchProcessor jobs={jobs} />
+          </>
+        )}
+        
+        {error && (
+            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative w-full max-w-4xl text-center mt-4" role="alert">
+              <strong className="font-bold">{t('errorPrefix')}</strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
         )}
       </main>
       <footer className="text-center p-4 text-slate-500 text-sm mt-8">

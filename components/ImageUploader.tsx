@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { useI18n } from '../contexts/I18nContext';
 
 interface ImageUploaderProps {
-  onImageUpload: (file: File) => void;
+  onImageUpload: (files: FileList) => void;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) => {
@@ -11,8 +11,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onImageUpload(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      onImageUpload(e.target.files);
     }
   };
 
@@ -20,8 +20,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onImageUpload(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onImageUpload(e.dataTransfer.files);
     }
   }, [onImageUpload]);
 
@@ -38,7 +38,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
   }, []);
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center p-8 bg-slate-800/50 rounded-2xl shadow-xl border border-slate-700">
+    <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center p-8 bg-slate-800/50 rounded-2xl shadow-xl border border-slate-700 animate-fade-in">
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -51,6 +51,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
           className="hidden"
           accept="image/png, image/jpeg, image/webp"
           onChange={handleFileChange}
+          multiple
         />
         <label htmlFor="file-upload" className="text-center cursor-pointer p-4">
           <svg className="mx-auto h-12 w-12 text-slate-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">

@@ -4,8 +4,8 @@ import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode, U
 import { useI18n } from '../contexts/I18nContext';
 
 interface ControlPanelProps {
-    onUpscale: () => void;
-    onReset: () => void;
+    onStartBatch: () => void;
+    onClearQueue: () => void;
     setUpscaleFactor: (factor: UpscaleFactor) => void;
     upscaleFactor: UpscaleFactor;
     upscalingGoal: UpscalingGoal;
@@ -30,7 +30,7 @@ const LabeledComponent: React.FC<{ label: string; children: React.ReactNode }> =
 
 export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     const { 
-        onUpscale, onReset, upscaleFactor, setUpscaleFactor,
+        onStartBatch, onClearQueue, upscaleFactor, setUpscaleFactor,
         upscalingGoal, setUpscalingGoal, preprocessingOptions, 
         setPreprocessingOptions, upscaleMode, setUpscaleMode, 
         colorEnhancement, setColorEnhancement, isLoading,
@@ -59,7 +59,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     };
 
     return (
-        <div className="w-full max-w-5xl p-4 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col gap-4">
+        <div className="w-full max-w-5xl p-4 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col gap-4 animate-fade-in">
             <div className="flex flex-col gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     <LabeledComponent label={t('upscaleEngine')}>
@@ -67,9 +67,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                             {engines.map(({ id, label, tooltip }) => (
                                 <button key={id} onClick={() => setUpscaleEngine(id)}
                                     title={tooltip}
+                                    disabled={isLoading}
                                     className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors w-full ${
                                         upscaleEngine === id ? 'bg-cyan-600 text-white' : 'bg-transparent text-slate-400 hover:bg-slate-700'
-                                    }`}>
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}>
                                     {label}
                                 </button>
                             ))}
@@ -80,9 +81,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                         <div className="flex items-center gap-1 p-1 bg-slate-900/50 rounded-lg w-full">
                             {factors.map((factor) => (
                                 <button key={factor} onClick={() => setUpscaleFactor(factor)}
+                                    disabled={isLoading}
                                     className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors w-full ${
                                         upscaleFactor === factor ? 'bg-slate-600 text-white' : 'bg-transparent text-slate-400 hover:bg-slate-700'
-                                    }`}>
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}>
                                     {factor}x
                                 </button>
                             ))}
@@ -97,9 +99,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                                 <div className="flex items-center gap-1 p-1 bg-slate-900/50 rounded-lg w-full">
                                     {goals.map(({ id, label }) => (
                                         <button key={id} onClick={() => setUpscalingGoal(id)}
+                                            disabled={isLoading}
                                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full ${
                                                 upscalingGoal === id ? 'bg-slate-600 text-white' : 'bg-transparent text-slate-400 hover:bg-slate-700'
-                                            }`}>
+                                            } disabled:opacity-50 disabled:cursor-not-allowed`}>
                                             {label}
                                         </button>
                                     ))}
@@ -108,13 +111,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
                             <LabeledComponent label={t('preprocessing')}>
                                 <div className="flex items-center gap-4 flex-wrap pt-1">
-                                    <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                                    <label className={`flex items-center gap-2 text-sm text-slate-300 ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                         <input type="checkbox" checked={preprocessingOptions.noiseReduction} onChange={() => handlePreprocessingChange('noiseReduction')}
+                                            disabled={isLoading}
                                             className="w-4 h-4 text-cyan-600 bg-slate-700 border-slate-500 rounded focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-2" />
                                         {t('noiseReduction')}
                                     </label>
-                                    <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                                    <label className={`flex items-center gap-2 text-sm text-slate-300 ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                         <input type="checkbox" checked={preprocessingOptions.autoContrast} onChange={() => handlePreprocessingChange('autoContrast')}
+                                            disabled={isLoading}
                                             className="w-4 h-4 text-cyan-600 bg-slate-700 border-slate-500 rounded focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-2" />
                                         {t('autoContrast')}
                                     </label>
@@ -124,10 +129,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                             <div className="flex flex-col gap-4 justify-start">
                                 <LabeledComponent label={t('proMode')}>
                                     <div className="flex items-center w-full" title={t('proModeTooltip')}>
-                                        <label htmlFor="pro-mode-toggle" className="flex items-center cursor-pointer">
+                                        <label htmlFor="pro-mode-toggle" className={`flex items-center ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                             <div className="relative">
                                                 <input type="checkbox" id="pro-mode-toggle" className="sr-only" 
                                                     checked={upscaleMode === 'pro'}
+                                                    disabled={isLoading}
                                                     onChange={() => setUpscaleMode(upscaleMode === 'standard' ? 'pro' : 'standard')}
                                                 />
                                                 <div className="block bg-slate-700 w-14 h-8 rounded-full"></div>
@@ -139,10 +145,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
                                 <LabeledComponent label={t('colorEnhancement')}>
                                     <div className="flex items-center w-full" title={t('colorEnhancementTooltip')}>
-                                        <label htmlFor="color-enhance-toggle" className="flex items-center cursor-pointer">
+                                        <label htmlFor="color-enhance-toggle" className={`flex items-center ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                             <div className="relative">
                                                 <input type="checkbox" id="color-enhance-toggle" className="sr-only" 
                                                     checked={colorEnhancement}
+                                                    disabled={isLoading}
                                                     onChange={() => setColorEnhancement(!colorEnhancement)}
                                                 />
                                                 <div className="block bg-slate-700 w-14 h-8 rounded-full"></div>
@@ -161,14 +168,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-4 w-full">
                 <button
-                    onClick={onReset}
+                    onClick={onClearQueue}
                     disabled={isLoading}
                     className="px-5 py-2.5 w-full sm:w-auto text-sm font-medium text-slate-300 bg-slate-700 rounded-lg hover:bg-slate-600 focus:ring-4 focus:outline-none focus:ring-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                    {t('uploadNewImage')}
+                    {t('clearQueue')}
                 </button>
                 <button
-                    onClick={onUpscale}
+                    onClick={onStartBatch}
                     disabled={isLoading}
                     className="relative inline-flex items-center justify-center w-full sm:w-auto px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-cyan-800 shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-wait disabled:shadow-none transition-all"
                 >
@@ -180,7 +187,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
                             </svg>
                             {t('processing')}
                         </>
-                    ) : t('enhanceImage')}
+                    ) : t('startBatch')}
                 </button>
             </div>
         </div>
