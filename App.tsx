@@ -5,7 +5,7 @@ import { ImageUploader } from './components/ImageUploader';
 import { ImageResultViewer } from './components/ImageResultViewer';
 import { LoadingState } from './components/LoadingState';
 import { upscaleImage } from './services/geminiService';
-import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode } from './types';
+import type { UpscaleFactor, UpscalingGoal, PreprocessingOptions, UpscaleMode, UpscaleEngine } from './types';
 import { ControlPanel } from './components/ControlPanel';
 import { useI18n } from './contexts/I18nContext';
 
@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [upscaleFactor, setUpscaleFactor] = useState<UpscaleFactor>(4);
   const [upscalingGoal, setUpscalingGoal] = useState<UpscalingGoal>('balanced');
   const [upscaleMode, setUpscaleMode] = useState<UpscaleMode>('standard');
+  const [upscaleEngine, setUpscaleEngine] = useState<UpscaleEngine>('generative');
   const [colorEnhancement, setColorEnhancement] = useState<boolean>(true);
   const [preprocessingOptions, setPreprocessingOptions] = useState<PreprocessingOptions>({
     noiseReduction: false,
@@ -122,6 +123,55 @@ const App: React.FC = () => {
     });
   };
 
+  const clientSideUpscale = (file: File, factor: UpscaleFactor): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            if (!e.target?.result) {
+                return reject(new Error('Could not read file.'));
+            }
+            img.onload = () => {
+                const newWidth = img.width * factor;
+                const newHeight = img.height * factor;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (!ctx) {
+                    return reject(new Error('Could not get canvas context'));
+                }
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+                // A simple contrast boost can improve perceived sharpness after upscaling
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = newWidth;
+                finalCanvas.height = newHeight;
+                const finalCtx = finalCanvas.getContext('2d');
+                if (!finalCtx) {
+                    return reject(new Error('Could not get canvas context for filtering'));
+                }
+                finalCtx.filter = 'contrast(1.05)';
+                finalCtx.drawImage(canvas, 0, 0);
+
+                resolve(finalCanvas.toDataURL(file.type));
+            };
+            img.onerror = () => reject(new Error('Image could not be loaded for client-side upscaling.'));
+            img.src = e.target.result as string;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file for client-side upscaling.'));
+        reader.readAsDataURL(file);
+    });
+  };
+
+
   const handleUpscale = useCallback(async () => {
     if (!originalImage) return;
 
@@ -130,33 +180,38 @@ const App: React.FC = () => {
     setUpscaledImage(null);
 
     try {
-      const needsPreprocessing = preprocessingOptions.noiseReduction || preprocessingOptions.autoContrast;
-      const imageDataUrl = needsPreprocessing
-        ? await preprocessImage(originalImage, preprocessingOptions)
-        : await fileToDataURL(originalImage);
+      if (upscaleEngine === 'fidelity') {
+          const upscaledDataUrl = await clientSideUpscale(originalImage, upscaleFactor);
+          setUpscaledImage(upscaledDataUrl);
+      } else { // 'generative' engine
+          const needsPreprocessing = preprocessingOptions.noiseReduction || preprocessingOptions.autoContrast;
+          const imageDataUrl = needsPreprocessing
+            ? await preprocessImage(originalImage, preprocessingOptions)
+            : await fileToDataURL(originalImage);
 
-      const base64Image = imageDataUrl.split(',')[1];
-      if (!base64Image) {
-          setError(t('errorProcessImage'));
-          setIsLoading(false);
-          return;
+          const base64Image = imageDataUrl.split(',')[1];
+          if (!base64Image) {
+              setError(t('errorProcessImage'));
+              setIsLoading(false);
+              return;
+          }
+          
+          const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal, upscaleMode);
+          let finalImageSrc = `data:image/png;base64,${enhancedImageBase64}`;
+
+          if (colorEnhancement) {
+            finalImageSrc = await applyColorEnhancement(finalImageSrc);
+          }
+
+          setUpscaledImage(finalImageSrc);
       }
-      
-      const enhancedImageBase64 = await upscaleImage(base64Image, originalImage.type, upscaleFactor, upscalingGoal, upscaleMode);
-      let finalImageSrc = `data:image/png;base64,${enhancedImageBase64}`;
-
-      if (colorEnhancement) {
-        finalImageSrc = await applyColorEnhancement(finalImageSrc);
-      }
-
-      setUpscaledImage(finalImageSrc);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t('errorUnknown'));
     } finally {
       setIsLoading(false);
     }
-  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, colorEnhancement, t]);
+  }, [originalImage, upscaleFactor, upscalingGoal, upscaleMode, preprocessingOptions, colorEnhancement, t, upscaleEngine]);
 
 
   return (
@@ -181,6 +236,8 @@ const App: React.FC = () => {
               colorEnhancement={colorEnhancement}
               setColorEnhancement={setColorEnhancement}
               isLoading={isLoading}
+              upscaleEngine={upscaleEngine}
+              setUpscaleEngine={setUpscaleEngine}
             />
             
             {error && (

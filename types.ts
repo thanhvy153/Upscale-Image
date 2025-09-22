@@ -9,3 +9,5 @@ export interface PreprocessingOptions {
   noiseReduction: boolean;
   autoContrast: boolean;
 }
+
+export type UpscaleEngine = 'generative' | 'fidelity';

@@ -12,6 +12,11 @@ export const translations = {
     uploaderFormats: 'PNG, JPG, or WEBP (Max 5MB)',
 
     // Control Panel
+    upscaleEngine: 'Upscale Engine:',
+    engineGenerative: 'Generative AI',
+    engineGenerativeTooltip: 'Uses Gemini AI to creatively enhance and upscale the image. Best for artistic results and removing artifacts.',
+    engineFidelity: 'Fidelity',
+    engineFidelityTooltip: 'Uses a fast, in-browser algorithm for a technical upscale. Best for preserving original details and photorealism.',
     upscaleFactor: 'Upscale Factor:',
     uploadNewImage: 'Upload New Image',
     enhanceImage: 'Enhance Image',
@@ -63,6 +68,11 @@ export const translations = {
     uploaderFormats: 'PNG, JPG, hoặc WEBP (Tối đa 5MB)',
 
     // Control Panel
+    upscaleEngine: 'Cơ Chế Nâng Cấp:',
+    engineGenerative: 'AI Sáng Tạo',
+    engineGenerativeTooltip: 'Sử dụng Gemini AI để nâng cấp và cải thiện ảnh một cách sáng tạo. Tốt nhất cho kết quả nghệ thuật và loại bỏ nhiễu.',
+    engineFidelity: 'Độ Trung Thực',
+    engineFidelityTooltip: 'Sử dụng thuật toán kỹ thuật, tốc độ cao ngay trên trình duyệt. Tốt nhất để bảo toàn chi tiết gốc và tính chân thực của ảnh.',
     upscaleFactor: 'Hệ Số Nâng Cấp:',
     uploadNewImage: 'Tải Ảnh Mới',
     enhanceImage: 'Nâng Cấp Ảnh',
