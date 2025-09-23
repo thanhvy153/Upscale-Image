@@ -35,16 +35,16 @@ export const translations = {
     // Image Result Viewer & Job Card
     originalImageTitle: 'Original',
     upscaledImageTitle: 'Upscaled',
-    downloadUpscaledPNG: 'Download Upscaled (PNG)',
-    downloadCompressedJPG: 'Download Compressed (JPG)',
+    downloadOptimizedJPG: 'Download JPG (Optimized)',
+    downloadMaxQualityPNG: 'Download PNG (Max Quality)',
+    compressing: 'Compressing...',
+    preparing: 'Preparing...',
     batchQueueTitle: 'Processing Queue',
     jobStatusQueued: 'Queued',
     jobStatusProcessing: 'Processing...',
     jobStatusCompleted: 'Completed',
     jobStatusError: 'Error',
-    // FIX: Add missing translation key for upscaled image placeholder text.
     upscaledPlaceholder: 'The upscaled image will appear here once processing is complete.',
-    // FIX: Add missing translation key for the download button in the result viewer.
     downloadButton: 'Download Upscaled Image',
 
     // Loading State
@@ -99,16 +99,16 @@ export const translations = {
     // Image Result Viewer & Job Card
     originalImageTitle: 'Ảnh Gốc',
     upscaledImageTitle: 'Đã Nâng Cấp',
-    downloadUpscaledPNG: 'Tải Ảnh Nâng Cấp (PNG)',
-    downloadCompressedJPG: 'Tải Ảnh Nén (JPG)',
+    downloadOptimizedJPG: 'Tải JPG (Tối ưu)',
+    downloadMaxQualityPNG: 'Tải PNG (Chất lượng tối đa)',
+    compressing: 'Đang nén...',
+    preparing: 'Đang chuẩn bị...',
     batchQueueTitle: 'Hàng Đợi Xử Lý',
     jobStatusQueued: 'Đang chờ',
     jobStatusProcessing: 'Đang xử lý...',
     jobStatusCompleted: 'Hoàn thành',
     jobStatusError: 'Lỗi',
-    // FIX: Add missing translation key for upscaled image placeholder text.
     upscaledPlaceholder: 'Ảnh đã nâng cấp sẽ xuất hiện ở đây sau khi xử lý xong.',
-    // FIX: Add missing translation key for the download button in the result viewer.
     downloadButton: 'Tải Xuống Ảnh Đã Nâng Cấp',
 
     // Loading State

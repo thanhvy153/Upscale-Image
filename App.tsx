@@ -12,6 +12,7 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const JobCard: React.FC<{ job: Job }> = ({ job }) => {
   const { t } = useI18n();
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   const getStatusChipColor = (status: JobStatus) => {
     switch (status) {
@@ -23,31 +24,71 @@ const JobCard: React.FC<{ job: Job }> = ({ job }) => {
     }
   };
 
-  const handleDownload = (format: 'png' | 'jpeg') => {
-    if (!job.upscaledImage) return;
+  const handleDownload = async (format: 'png' | 'jpeg') => {
+    if (!job.upscaledImage || isDownloading) return;
+    setIsDownloading(format);
 
-    const img = new Image();
-    img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Failed to load upscaled image for processing.'));
+        image.src = job.upscaledImage!;
+      });
 
-        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-        const quality = format === 'jpeg' ? 0.85 : undefined;
-        const dataUrl = canvas.toDataURL(mimeType, quality);
-        
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      ctx.drawImage(img, 0, 0);
+
+      let finalBlob: Blob | null = null;
+      const fileExtension = format;
+
+      if (format === 'jpeg') {
+        const TARGET_SIZE_BYTES = 40 * 1024 * 1024; // 40 MB
+        const MIN_QUALITY = 0.70;
+        let currentQuality = 0.95;
+
+        // Smart Size Controller: Iteratively find the best quality under the size limit
+        while (true) {
+          const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', currentQuality));
+          if (!blob) {
+            console.error('Failed to create blob at quality:', currentQuality);
+            break;
+          }
+
+          finalBlob = blob;
+          if (blob.size <= TARGET_SIZE_BYTES || currentQuality <= MIN_QUALITY) {
+            // Stop if we are under budget or have reached the minimum quality
+            break;
+          }
+          currentQuality -= 0.05;
+        }
+      } else { // format === 'png'
+        finalBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      }
+
+      if (finalBlob) {
+        const url = URL.createObjectURL(finalBlob);
         const a = document.createElement('a');
-        a.href = dataUrl;
+        a.href = url;
         const baseName = job.file.name.split('.').slice(0, -1).join('.');
-        a.download = `upscaled-${baseName}.${format}`;
+        a.download = `upscaled-${baseName}.${fileExtension}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-    };
-    img.src = job.upscaledImage;
+        URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Failed to create image blob for download.');
+      }
+    } catch (err) {
+      console.error("Download failed:", err);
+      // In a larger app, we would propagate this error to the UI
+    } finally {
+      setIsDownloading(null);
+    }
   };
 
   return (
@@ -84,11 +125,17 @@ const JobCard: React.FC<{ job: Job }> = ({ job }) => {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <button onClick={() => handleDownload('jpeg')} className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 transition-colors">
-              {t('downloadCompressedJPG')}
+            <button 
+              onClick={() => handleDownload('jpeg')} 
+              disabled={!!isDownloading}
+              className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 transition-colors disabled:bg-cyan-800 disabled:cursor-not-allowed">
+              {isDownloading === 'jpeg' ? t('compressing') : t('downloadOptimizedJPG')}
             </button>
-            <button onClick={() => handleDownload('png')} className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-slate-600 font-medium rounded-md text-slate-300 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900 transition-colors">
-              {t('downloadUpscaledPNG')}
+            <button 
+              onClick={() => handleDownload('png')} 
+              disabled={!!isDownloading}
+              className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-slate-600 font-medium rounded-md text-slate-300 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900 transition-colors disabled:bg-slate-800 disabled:cursor-not-allowed">
+              {isDownloading === 'png' ? t('preparing') : t('downloadMaxQualityPNG')}
             </button>
           </div>
         </div>
