@@ -32,12 +32,11 @@ export const translations = {
     colorEnhancement: 'Vibrance & Sharpen:',
     colorEnhancementTooltip: 'Applies post-processing filters to boost color vibrancy, contrast, and sharpness for an "8K Feel".',
 
-    // Image Result Viewer & Job Card
+    // Job Card & Export Modal
     originalImageTitle: 'Original',
     upscaledImageTitle: 'Upscaled',
-    downloadOptimizedJPG: 'Download JPG (Optimized)',
+    exportJPG: 'Export as JPG...',
     downloadMaxQualityPNG: 'Download PNG (Max Quality)',
-    compressing: 'Compressing...',
     preparing: 'Preparing...',
     batchQueueTitle: 'Processing Queue',
     jobStatusQueued: 'Queued',
@@ -45,7 +44,13 @@ export const translations = {
     jobStatusCompleted: 'Completed',
     jobStatusError: 'Error',
     upscaledPlaceholder: 'The upscaled image will appear here once processing is complete.',
-    downloadButton: 'Download Upscaled Image',
+    downloadButton: 'Download',
+    exportOptionsTitle: 'Export Options',
+    qualityLabel: 'Quality',
+    estimatedSizeLabel: 'Estimated Size',
+    livePreviewLabel: 'Live Preview (Zoomed)',
+    highFileSizeWarning: 'Tip: Quality above 95 has diminishing returns for a much larger file size.',
+    fileSizeWarning: (size: number) => `Warning: File size is over ${size}MB. Consider lowering quality.`,
 
     // Loading State
     loadingTitle: 'AI is enhancing your image...',
@@ -96,12 +101,11 @@ export const translations = {
     colorEnhancement: 'Độ Rực Rỡ & Sắc Nét:',
     colorEnhancementTooltip: 'Áp dụng các bộ lọc hậu kỳ để tăng cường độ rực rỡ, độ tương phản và độ sắc nét của màu sắc để tạo "Cảm giác 8K".',
 
-    // Image Result Viewer & Job Card
+    // Job Card & Export Modal
     originalImageTitle: 'Ảnh Gốc',
     upscaledImageTitle: 'Đã Nâng Cấp',
-    downloadOptimizedJPG: 'Tải JPG (Tối ưu)',
+    exportJPG: 'Xuất dưới dạng JPG...',
     downloadMaxQualityPNG: 'Tải PNG (Chất lượng tối đa)',
-    compressing: 'Đang nén...',
     preparing: 'Đang chuẩn bị...',
     batchQueueTitle: 'Hàng Đợi Xử Lý',
     jobStatusQueued: 'Đang chờ',
@@ -109,7 +113,13 @@ export const translations = {
     jobStatusCompleted: 'Hoàn thành',
     jobStatusError: 'Lỗi',
     upscaledPlaceholder: 'Ảnh đã nâng cấp sẽ xuất hiện ở đây sau khi xử lý xong.',
-    downloadButton: 'Tải Xuống Ảnh Đã Nâng Cấp',
+    downloadButton: 'Tải xuống',
+    exportOptionsTitle: 'Tùy Chọn Xuất File',
+    qualityLabel: 'Chất lượng',
+    estimatedSizeLabel: 'Kích thước ước tính',
+    livePreviewLabel: 'Xem trước (Phóng to)',
+    highFileSizeWarning: 'Mẹo: Chất lượng trên 95 không cải thiện nhiều nhưng làm tăng đáng kể kích thước file.',
+    fileSizeWarning: (size: number) => `Cảnh báo: Kích thước file lớn hơn ${size}MB. Cân nhắc giảm chất lượng.`,
 
     // Loading State
     loadingTitle: 'AI đang nâng cấp hình ảnh của bạn...',

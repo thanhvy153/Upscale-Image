@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { ImageUploader } from './components/ImageUploader';
 import { upscaleImage } from './services/geminiService';
@@ -10,9 +10,208 @@ import { useI18n } from './contexts/I18nContext';
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
+// +++ START: Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+// +++ END: Custom hook
+
+// +++ START: New DownloadOptionsModal Component
+interface DownloadOptionsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  imageSrc: string;
+  fileName: string;
+}
+
+const DownloadOptionsModal: React.FC<DownloadOptionsModalProps> = ({ isOpen, onClose, imageSrc, fileName }) => {
+  const { t } = useI18n();
+  const [quality, setQuality] = useState(92);
+  const debouncedQuality = useDebounce(quality, 250);
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
+  const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null);
+  
+  const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (isMountedRef.current) {
+        originalImageRef.current = img;
+        compressImage(quality);
+      }
+    };
+    img.src = imageSrc;
+    return () => {
+      isMountedRef.current = false;
+    }
+  }, [imageSrc]);
+
+  useEffect(() => {
+    if (isOpen && originalImageRef.current) {
+      compressImage(debouncedQuality);
+    }
+  }, [debouncedQuality, isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const updatePreview = useCallback(async (blob: Blob) => {
+    const previewCanvas = previewCanvasRef.current;
+    if (!previewCanvas || !originalImageRef.current) return;
+    const ctx = previewCanvas.getContext('2d');
+    if (!ctx) return;
+    
+    const previewUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+        const originalW = originalImageRef.current!.width;
+        const originalH = originalImageRef.current!.height;
+        
+        const previewSize = Math.min(originalW, originalH, 300);
+        previewCanvas.width = previewSize;
+        previewCanvas.height = previewSize;
+        
+        const zoomFactor = Math.min(originalW / previewSize, originalH / previewSize, 4);
+        const cropW = previewCanvas.width * zoomFactor;
+        const cropH = previewCanvas.height * zoomFactor;
+        const cropX = (originalW - cropW) / 2;
+        const cropY = (originalH - cropH) / 2;
+        
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, previewCanvas.width, previewCanvas.height);
+        URL.revokeObjectURL(previewUrl);
+    };
+    img.src = previewUrl;
+  }, []);
+
+  const compressImage = useCallback(async (currentQuality: number) => {
+    if (!originalImageRef.current) return;
+    setIsProcessing(true);
+    const canvas = document.createElement('canvas');
+    canvas.width = originalImageRef.current.width;
+    canvas.height = originalImageRef.current.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(originalImageRef.current, 0, 0);
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', currentQuality / 100));
+    if (blob && isMountedRef.current) {
+      setCompressedBlob(blob);
+      setEstimatedSize(blob.size);
+      updatePreview(blob);
+    }
+    setIsProcessing(false);
+  }, [updatePreview]);
+
+  const handleDownload = () => {
+    if (!compressedBlob) return;
+    const url = URL.createObjectURL(compressedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = fileName.split('.').slice(0, -1).join('.');
+    a.download = `upscaled-${baseName}-q${quality}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+  const sizeInMB = estimatedSize ? estimatedSize / (1024*1024) : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" role="dialog" aria-modal="true">
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-2xl m-4" onClick={(e) => e.stopPropagation()}>
+        <header className="flex items-center justify-between p-4 border-b border-slate-700">
+          <h2 className="text-lg font-bold text-slate-200">{t('exportOptionsTitle')}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">&times;</button>
+        </header>
+
+        <main className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col items-center justify-center bg-slate-900/50 rounded-lg p-2 aspect-square">
+             <p className="text-xs text-slate-400 mb-2">{t('livePreviewLabel')}</p>
+             <canvas ref={previewCanvasRef} className="rounded-md max-w-full max-h-full object-contain"></canvas>
+             {isProcessing && <div className="absolute text-xs text-slate-300">...</div>}
+          </div>
+          <div className="flex flex-col justify-center gap-6">
+            <div>
+              <label htmlFor="quality-slider" className="block text-sm font-medium text-slate-300 mb-2">{t('qualityLabel')}: <span className="font-bold text-cyan-400">{quality}</span></label>
+              <input 
+                id="quality-slider"
+                type="range" 
+                min="75" 
+                max="100" 
+                value={quality}
+                onChange={(e) => setQuality(parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+              />
+               <p className="text-xs text-slate-500 mt-2">{t('highFileSizeWarning')}</p>
+            </div>
+            <div>
+                <h3 className="text-sm font-medium text-slate-300">{t('estimatedSizeLabel')}</h3>
+                {isProcessing ? (
+                  <p className="text-2xl font-bold text-slate-400 animate-pulse">...</p>
+                ) : (
+                  <p className={`text-2xl font-bold ${sizeInMB > 40 ? 'text-amber-400' : 'text-slate-200'}`}>{estimatedSize ? formatBytes(estimatedSize) : 'N/A'}</p>
+                )}
+                 {sizeInMB > 40 && !isProcessing && (
+                    <p className="text-xs text-amber-500 mt-1">{t('fileSizeWarning', 40)}</p>
+                )}
+            </div>
+          </div>
+        </main>
+        
+        <footer className="p-4 bg-slate-800/50 border-t border-slate-700 flex justify-end">
+          <button 
+            onClick={handleDownload}
+            disabled={isProcessing || !compressedBlob}
+            className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-cyan-800 shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-wait disabled:shadow-none transition-all">
+              {isProcessing ? t('processing') : t('downloadButton')}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+};
+// +++ END: New Component
+
+
 const JobCard: React.FC<{ job: Job }> = ({ job }) => {
   const { t } = useI18n();
-  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [isPngDownloading, setIsPngDownloading] = useState(false);
+  const [isDownloadModalOpen, setDownloadModalOpen] = useState(false);
 
   const getStatusChipColor = (status: JobStatus) => {
     switch (status) {
@@ -24,130 +223,97 @@ const JobCard: React.FC<{ job: Job }> = ({ job }) => {
     }
   };
 
-  const handleDownload = async (format: 'png' | 'jpeg') => {
-    if (!job.upscaledImage || isDownloading) return;
-    setIsDownloading(format);
+  const handlePngDownload = async () => {
+    if (!job.upscaledImage || isPngDownloading || isDownloadModalOpen) return;
+    setIsPngDownloading(true);
 
     try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error('Failed to load upscaled image for processing.'));
-        image.src = job.upscaledImage!;
-      });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not get canvas context');
-      ctx.drawImage(img, 0, 0);
-
-      let finalBlob: Blob | null = null;
-      const fileExtension = format;
-
-      if (format === 'jpeg') {
-        const TARGET_SIZE_BYTES = 40 * 1024 * 1024; // 40 MB
-        const MIN_QUALITY = 0.70;
-        let currentQuality = 0.95;
-
-        // Smart Size Controller: Iteratively find the best quality under the size limit
-        while (true) {
-          const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', currentQuality));
-          if (!blob) {
-            console.error('Failed to create blob at quality:', currentQuality);
-            break;
-          }
-
-          finalBlob = blob;
-          if (blob.size <= TARGET_SIZE_BYTES || currentQuality <= MIN_QUALITY) {
-            // Stop if we are under budget or have reached the minimum quality
-            break;
-          }
-          currentQuality -= 0.05;
-        }
-      } else { // format === 'png'
-        finalBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-      }
-
-      if (finalBlob) {
-        const url = URL.createObjectURL(finalBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        const baseName = job.file.name.split('.').slice(0, -1).join('.');
-        a.download = `upscaled-${baseName}.${fileExtension}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        throw new Error('Failed to create image blob for download.');
-      }
+      const blob = await fetch(job.upscaledImage).then(res => res.blob());
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const baseName = job.file.name.split('.').slice(0, -1).join('.');
+      a.download = `upscaled-${baseName}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Download failed:", err);
-      // In a larger app, we would propagate this error to the UI
+      console.error("PNG Download failed:", err);
     } finally {
-      setIsDownloading(null);
+      setIsPngDownloading(false);
     }
   };
 
+  const isActionDisabled = isPngDownloading || isDownloadModalOpen;
+
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 flex flex-col gap-4">
-      <div className="flex justify-between items-start gap-3">
-        <div className="flex items-start gap-3">
-          <img src={job.originalPreview} alt={job.file.name} className="w-16 h-16 rounded-md object-cover bg-slate-900" />
-          <div>
-            <p className="text-sm font-semibold text-slate-200 break-all">{job.file.name}</p>
-            <p className="text-xs text-slate-400">{Math.round(job.file.size / 1024)} KB</p>
+    <>
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 flex flex-col gap-4">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex items-start gap-3">
+            <img src={job.originalPreview} alt={job.file.name} className="w-16 h-16 rounded-md object-cover bg-slate-900" />
+            <div>
+              <p className="text-sm font-semibold text-slate-200 break-all">{job.file.name}</p>
+              <p className="text-xs text-slate-400">{Math.round(job.file.size / 1024)} KB</p>
+            </div>
+          </div>
+          <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${getStatusChipColor(job.status)}`}>
+            {t(`jobStatus${job.status.charAt(0).toUpperCase() + job.status.slice(1)}` as any)}
           </div>
         </div>
-        <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${getStatusChipColor(job.status)}`}>
-          {t(`jobStatus${job.status.charAt(0).toUpperCase() + job.status.slice(1)}` as any)}
-        </div>
+
+        {job.status === 'processing' && (
+          <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+            <div className="bg-cyan-500 h-2.5 rounded-full animate-pulse" style={{width: '100%'}}></div>
+          </div>
+        )}
+
+        {job.status === 'completed' && job.upscaledImage && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex flex-col items-center">
+                <img src={job.originalPreview} alt={t('originalImageTitle')} className="w-full h-auto rounded-lg object-contain" />
+                <p className="text-xs mt-1 text-slate-400 font-semibold">{t('originalImageTitle')}</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <img src={job.upscaledImage} alt={t('upscaledImageTitle')} className="w-full h-auto rounded-lg object-contain" />
+                <p className="text-xs mt-1 text-slate-400 font-semibold">{t('upscaledImageTitle')}</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button 
+                onClick={() => setDownloadModalOpen(true)}
+                disabled={isActionDisabled}
+                className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 transition-colors disabled:bg-cyan-800 disabled:cursor-not-allowed">
+                {t('exportJPG')}
+              </button>
+              <button 
+                onClick={handlePngDownload} 
+                disabled={isActionDisabled}
+                className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-slate-600 font-medium rounded-md text-slate-300 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900 transition-colors disabled:bg-slate-800 disabled:cursor-not-allowed">
+                {isPngDownloading ? t('preparing') : t('downloadMaxQualityPNG')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {job.status === 'error' && job.error && (
+          <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-3 py-2 rounded-lg text-sm" role="alert">
+            <strong className="font-bold">{t('errorPrefix')}</strong>
+            <span>{job.error}</span>
+          </div>
+        )}
       </div>
-
-      {job.status === 'processing' && (
-        <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
-          <div className="bg-cyan-500 h-2.5 rounded-full animate-pulse" style={{width: '100%'}}></div>
-        </div>
+      {job.upscaledImage && (
+        <DownloadOptionsModal 
+          isOpen={isDownloadModalOpen}
+          onClose={() => setDownloadModalOpen(false)}
+          imageSrc={job.upscaledImage}
+          fileName={job.file.name}
+        />
       )}
-
-      {job.status === 'completed' && job.upscaledImage && (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="flex flex-col items-center">
-              <img src={job.originalPreview} alt={t('originalImageTitle')} className="w-full h-auto rounded-lg object-contain" />
-              <p className="text-xs mt-1 text-slate-400 font-semibold">{t('originalImageTitle')}</p>
-            </div>
-            <div className="flex flex-col items-center">
-              <img src={job.upscaledImage} alt={t('upscaledImageTitle')} className="w-full h-auto rounded-lg object-contain" />
-              <p className="text-xs mt-1 text-slate-400 font-semibold">{t('upscaledImageTitle')}</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button 
-              onClick={() => handleDownload('jpeg')} 
-              disabled={!!isDownloading}
-              className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 transition-colors disabled:bg-cyan-800 disabled:cursor-not-allowed">
-              {isDownloading === 'jpeg' ? t('compressing') : t('downloadOptimizedJPG')}
-            </button>
-            <button 
-              onClick={() => handleDownload('png')} 
-              disabled={!!isDownloading}
-              className="w-full text-sm inline-flex items-center justify-center px-4 py-2 border border-slate-600 font-medium rounded-md text-slate-300 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900 transition-colors disabled:bg-slate-800 disabled:cursor-not-allowed">
-              {isDownloading === 'png' ? t('preparing') : t('downloadMaxQualityPNG')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {job.status === 'error' && job.error && (
-        <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-3 py-2 rounded-lg text-sm" role="alert">
-          <strong className="font-bold">{t('errorPrefix')}</strong>
-          <span>{job.error}</span>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
